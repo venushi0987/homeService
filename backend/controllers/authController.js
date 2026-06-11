@@ -24,7 +24,7 @@ const registerUser = async (req, res) => {
       name,
       phone,
       password: hashedPassword,
-      role: role || 'customer' // Defaults to customer if not provided
+      role: role || 'customer'
     });
 
     if (user) {
@@ -43,6 +43,44 @@ const registerUser = async (req, res) => {
   }
 };
 
+// @desc    Authenticate a user & get token
+// @route   POST /api/auth/login
+// @access  Public
+const loginUser = async (req, res) => {
+  try {
+    const { phone, password } = req.body;
+
+    // 1. Check if user exists
+    const user = await User.findOne({ phone });
+
+    // 2. Check if user exists and password matches
+    if (user && (await bcrypt.compare(password, user.password))) {
+      
+      // 3. Generate JWT Token
+      const token = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      res.json({
+        _id: user._id,
+        name: user.name,
+        phone: user.phone,
+        role: user.role,
+        token: token,
+        message: 'Login successful'
+      });
+    } else {
+      res.status(401).json({ message: 'Invalid phone number or password' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// module.exports එකට loginUser එකත් ඇතුලත් කරලා තියෙන්නේ:
 module.exports = {
-  registerUser
+  registerUser,
+  loginUser
 };
